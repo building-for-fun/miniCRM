@@ -1,0 +1,106 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Organization {
+  id        String    @id @default(cuid())
+  name      String
+  industry  String?
+  size      String?
+  website   String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  contacts Contact[]
+  leads    Lead[]
+  activities Activity[]
+  tasks      Task[]
+
+  @@map("organizations")
+}
+
+model Contact {
+  id             String       @id @default(cuid())
+  name           String
+  email          String       @unique
+  phone          String?
+  role           String?
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  leads      Lead[]
+  activities Activity[]
+  tasks      Task[]
+
+  @@map("contacts")
+}
+
+model Lead {
+  id             String    @id @default(cuid())
+  title          String
+  status         String    @default("NEW")
+  source         String?
+  priority       String    @default("MEDIUM")
+  nextAction     String?
+  notes          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  contactId String
+  contact     Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  activities Activity[]
+  tasks      Task[]
+
+  @@map("leads")
+}
+
+model Activity {
+  id             String        @id @default(cuid())
+  channel        String
+  description    String
+  outcome        String?
+  timestamp      DateTime      @default(now())
+
+  leadId         String
+  lead           Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  contactId      String
+  contact        Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("activities")
+}
+
+model Task {
+  id             String        @id @default(cuid())
+  title          String
+  dueDate        String
+  priority       String        @default("MEDIUM")
+  completed      Boolean       @default(false)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  leadId         String
+  lead           Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  contactId      String
+  contact        Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("tasks")
+}
