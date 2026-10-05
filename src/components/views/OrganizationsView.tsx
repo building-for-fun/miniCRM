@@ -32,31 +32,48 @@ export default function OrganizationsView({ onOpenModal }: { onOpenModal: (id: M
             </tr>
           </thead>
           <tbody>
-            {state.organizations.map(o => {
-              const contactCount = state.contacts.filter(c => c.organizationId === o.id).length
-              const leadCount = state.leads.filter(l => l.organizationId === o.id).length
-              return (
-                <tr key={o.id}>
-                  <td style={{ fontWeight: 600 }}>{escapeHtml(o.name)}</td>
-                  <td>{escapeHtml(o.industry || '—')}</td>
-                  <td>{escapeHtml(o.size || '—')}</td>
-                  <td>
-                    <a
-                      href={o.website}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{ color: 'var(--accent-primary)', textDecoration: 'none' }}
-                    >
-                      {escapeHtml(o.website)}
-                    </a>
-                  </td>
-                  <td>{contactCount} contacts</td>
-                  <td>
-                    <span className="badge badge-qualified">{leadCount} leads</span>
-                  </td>
-                </tr>
-              )
-            })}
+            {state.organizations.length === 0 ? (
+              <tr>
+                <td colSpan={6}>
+                  <div className="empty-state">
+                    <div className="empty-title">No organizations yet</div>
+                    <div className="empty-desc">
+                      Register your first organization, or load demo data from Settings → Reset to Demo Fixtures.
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            ) : (
+              state.organizations.map(o => {
+                const contactCount = state.contacts.filter(c => c.organizationId === o.id).length
+                const leadCount = state.leads.filter(l => l.organizationId === o.id).length
+                return (
+                  <tr key={o.id}>
+                    <td style={{ fontWeight: 600 }}>{escapeHtml(o.name)}</td>
+                    <td>{escapeHtml(o.industry || '—')}</td>
+                    <td>{escapeHtml(o.size || '—')}</td>
+                    <td>
+                      {o.website ? (
+                        <a
+                          href={o.website}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ color: 'var(--accent-primary)', textDecoration: 'none' }}
+                        >
+                          {escapeHtml(o.website)}
+                        </a>
+                      ) : (
+                        '—'
+                      )}
+                    </td>
+                    <td>{contactCount} contacts</td>
+                    <td>
+                      <span className="badge badge-qualified">{leadCount} leads</span>
+                    </td>
+                  </tr>
+                )
+              })
+            )}
           </tbody>
         </table>
       </div>

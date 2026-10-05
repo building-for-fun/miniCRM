@@ -437,7 +437,7 @@ export { exportDataJson }
 
 export default function Dashboard() {
   const crm = useCrm()
-  const { currentView, setCurrentView, state, toasts } = crm
+  const { currentView, setCurrentView, state, toasts, isLoading, loadError, refetch } = crm
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [activeModal, setActiveModal] = useState<ModalId | null>(null)
@@ -470,15 +470,36 @@ export default function Dashboard() {
         <Topbar onNavigate={navigate} onOpenModal={openModal} onToggleMobile={() => setMobileOpen(v => !v)} />
 
         <main className="content-area" id="mainContent">
-          {currentView === 'dashboard' && (
-            <DashboardView onNavigate={navigate} onOpenModal={openModal} onExport={() => exportDataJson(state, crm.showToast)} />
+          {isLoading && (
+            <div className="empty-state" style={{ paddingTop: 80 }}>
+              <div className="spinner" />
+              <p className="empty-desc">Loading CRM data from the database…</p>
+            </div>
           )}
-          {currentView === 'leads' && <LeadsView onOpenModal={openModal} />}
-          {currentView === 'contacts' && <ContactsView onOpenModal={openModal} />}
-          {currentView === 'organizations' && <OrganizationsView onOpenModal={openModal} />}
-          {currentView === 'activities' && <ActivitiesView onOpenModal={openModal} />}
-          {currentView === 'tasks' && <TasksView onOpenModal={openModal} />}
-          {currentView === 'settings' && <SettingsView onExport={() => exportDataJson(state, crm.showToast)} />}
+
+          {!isLoading && loadError && (
+            <div className="empty-state" style={{ paddingTop: 80 }}>
+              <p className="empty-title">Could not load CRM data</p>
+              <p className="empty-desc">{loadError}</p>
+              <button className="btn btn-primary" onClick={refetch}>
+                Retry
+              </button>
+            </div>
+          )}
+
+          {!isLoading && !loadError && (
+            <>
+              {currentView === 'dashboard' && (
+                <DashboardView onNavigate={navigate} onOpenModal={openModal} onExport={() => exportDataJson(state, crm.showToast)} />
+              )}
+              {currentView === 'leads' && <LeadsView onOpenModal={openModal} />}
+              {currentView === 'contacts' && <ContactsView onOpenModal={openModal} />}
+              {currentView === 'organizations' && <OrganizationsView onOpenModal={openModal} />}
+              {currentView === 'activities' && <ActivitiesView onOpenModal={openModal} />}
+              {currentView === 'tasks' && <TasksView onOpenModal={openModal} />}
+              {currentView === 'settings' && <SettingsView onExport={() => exportDataJson(state, crm.showToast)} />}
+            </>
+          )}
         </main>
       </div>
 

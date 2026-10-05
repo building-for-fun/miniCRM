@@ -45,9 +45,9 @@ model Contact {
 model Lead {
   id             String    @id @default(cuid())
   title          String
-  status         String    @default("NEW")
+  status         String    @default("New")
   source         String?
-  priority       String    @default("MEDIUM")
+  priority       String    @default("Medium")
   nextAction     String?
   notes          String?
   createdAt      DateTime  @default(now())
@@ -88,7 +88,7 @@ model Task {
   id             String        @id @default(cuid())
   title          String
   dueDate        String
-  priority       String        @default("MEDIUM")
+  priority       String        @default("Medium")
   completed      Boolean       @default(false)
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt

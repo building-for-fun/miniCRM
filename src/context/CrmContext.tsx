@@ -1,9 +1,15 @@
 'use client'
 
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react'
 import {
-  INITIAL_DATA,
-  STORAGE_KEY,
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
   type CrmState,
   type Lead,
   type Contact,
@@ -12,9 +18,13 @@ import {
   type Task,
   type LeadStatus,
 } from '@/lib/crm-data'
+import { crmApi } from '@/lib/api'
 
 interface CrmContextType {
   state: CrmState
+  isLoading: boolean
+  loadError: string | null
+  refetch: () => void
   currentActiveLeadId: string | null
   currentLeadStageFilter: string
   currentTaskFilter: string
@@ -40,34 +50,62 @@ interface CrmContextType {
 
 const CrmContext = createContext<CrmContextType | null>(null)
 
-function loadState(): CrmState {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY)
-    if (saved) return JSON.parse(saved)
-  } catch {
-    /* ignore */
-  }
-  return JSON.parse(JSON.stringify(INITIAL_DATA))
+function errorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error && error.message ? error.message : fallback
 }
 
 export function CrmProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<CrmState>(() =>
-    typeof window === 'undefined' ? JSON.parse(JSON.stringify(INITIAL_DATA)) : loadState()
-  )
+  const queryClient = useQueryClient()
+
   const [currentActiveLeadId, setCurrentActiveLeadId] = useState<string | null>(null)
   const [currentLeadStageFilter, setCurrentLeadStageFilter] = useState('ALL')
   const [currentTaskFilter, setCurrentTaskFilter] = useState('OPEN')
   const [currentView, setCurrentView] = useState('dashboard')
   const [toasts, setToasts] = useState<{ id: number; message: string }[]>([])
 
-  const persist = useCallback((next: CrmState) => {
-    setState(next)
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
-    } catch {
-      /* ignore */
-    }
-  }, [])
+  const organizationsQuery = useQuery({ queryKey: ['organizations'], queryFn: crmApi.getOrganizations })
+  const contactsQuery = useQuery({ queryKey: ['contacts'], queryFn: crmApi.getContacts })
+  const leadsQuery = useQuery({ queryKey: ['leads'], queryFn: crmApi.getLeads })
+  const activitiesQuery = useQuery({ queryKey: ['activities'], queryFn: crmApi.getActivities })
+  const tasksQuery = useQuery({ queryKey: ['tasks'], queryFn: crmApi.getTasks })
+
+  const state = useMemo<CrmState>(
+    () => ({
+      organizations: organizationsQuery.data ?? [],
+      contacts: contactsQuery.data ?? [],
+      leads: leadsQuery.data ?? [],
+      activities: activitiesQuery.data ?? [],
+      tasks: tasksQuery.data ?? [],
+    }),
+    [
+      organizationsQuery.data,
+      contactsQuery.data,
+      leadsQuery.data,
+      activitiesQuery.data,
+      tasksQuery.data,
+    ]
+  )
+
+  const isLoading =
+    organizationsQuery.isPending ||
+    contactsQuery.isPending ||
+    leadsQuery.isPending ||
+    activitiesQuery.isPending ||
+    tasksQuery.isPending
+
+  const firstError = [
+    organizationsQuery.error,
+    contactsQuery.error,
+    leadsQuery.error,
+    activitiesQuery.error,
+    tasksQuery.error,
+  ].find(Boolean)
+
+  const loadError = firstError ? errorMessage(firstError, 'Failed to load CRM data') : null
+
+  const refetch = useCallback(() => {
+    void queryClient.invalidateQueries()
+  }, [queryClient])
 
   const showToast = useCallback((message: string) => {
     const id = Date.now() + Math.random()
@@ -76,6 +114,11 @@ export function CrmProvider({ children }: { children: ReactNode }) {
       setToasts(prev => prev.filter(t => t.id !== id))
     }, 3000)
   }, [])
+
+  const notifyError = useCallback(
+    (error: unknown, fallback: string) => showToast(errorMessage(error, fallback)),
+    [showToast]
+  )
 
   const getOrg = useCallback(
     (id: string) =>
@@ -96,132 +139,132 @@ export function CrmProvider({ children }: { children: ReactNode }) {
     [state.leads]
   )
 
-  const createLead = useCallback(
-    (data: Omit<Lead, 'id' | 'createdAt'>) => {
-      const newLead: Lead = {
-        ...data,
-        id: `lead-${Date.now()}`,
-        createdAt: new Date().toISOString().split('T')[0],
-      }
-      const newActivity: Activity = {
-        id: `act-${Date.now()}`,
-        leadId: newLead.id,
-        contactId: newLead.contactId,
-        organizationId: newLead.organizationId,
-        channel: 'Lead',
-        description: `New lead created: "${newLead.title}"`,
-        outcome: `Initial stage: ${newLead.status}`,
-        timestamp: 'Just now',
-      }
-      persist({
-        ...state,
-        leads: [newLead, ...state.leads],
-        activities: [newActivity, ...state.activities],
-      })
+  const createLeadMutation = useMutation({
+    mutationFn: crmApi.createLead,
+    onSuccess: () => {
+      refetch()
       showToast('New lead created successfully')
     },
-    [state, persist, showToast]
+    onError: error => notifyError(error, 'Failed to create lead'),
+  })
+
+  const createContactMutation = useMutation({
+    mutationFn: crmApi.createContact,
+    onSuccess: () => {
+      refetch()
+      showToast('Contact added to directory')
+    },
+    onError: error => notifyError(error, 'Failed to add contact'),
+  })
+
+  const createOrgMutation = useMutation({
+    mutationFn: crmApi.createOrganization,
+    onSuccess: () => {
+      refetch()
+      showToast('Organization registered')
+    },
+    onError: error => notifyError(error, 'Failed to register organization'),
+  })
+
+  const createActivityMutation = useMutation({
+    mutationFn: crmApi.createActivity,
+    onSuccess: () => {
+      refetch()
+      showToast('Activity logged')
+    },
+    onError: error => notifyError(error, 'Failed to log activity'),
+  })
+
+  const createTaskMutation = useMutation({
+    mutationFn: crmApi.createTask,
+    onSuccess: () => {
+      refetch()
+      showToast('Task created')
+    },
+    onError: error => notifyError(error, 'Failed to create task'),
+  })
+
+  const changeLeadStatusMutation = useMutation({
+    mutationFn: ({ leadId, status }: { leadId: string; status: LeadStatus }) =>
+      crmApi.updateLeadStatus(leadId, status),
+    onSuccess: (_lead, { status }) => {
+      refetch()
+      showToast(`Lead moved to ${status}`)
+    },
+    onError: error => notifyError(error, 'Failed to update lead status'),
+  })
+
+  const toggleTaskStatusMutation = useMutation({
+    mutationFn: ({ taskId, completed }: { taskId: string; completed: boolean }) =>
+      crmApi.updateTaskCompletion(taskId, completed),
+    onSuccess: (_task, { completed }) => {
+      refetch()
+      showToast(completed ? 'Task marked completed' : 'Task marked pending')
+    },
+    onError: error => notifyError(error, 'Failed to update task'),
+  })
+
+  const resetToSampleDataMutation = useMutation({
+    mutationFn: crmApi.resetSampleData,
+    onSuccess: () => {
+      refetch()
+      showToast('Reset to sample CRM fixtures')
+    },
+    onError: error => notifyError(error, 'Failed to reset sample data'),
+  })
+
+  const createLead = useCallback(
+    (data: Omit<Lead, 'id' | 'createdAt'>) => createLeadMutation.mutate(data),
+    [createLeadMutation]
   )
 
   const createContact = useCallback(
-    (data: Omit<Contact, 'id'>) => {
-      persist({ ...state, contacts: [{ ...data, id: `cnt-${Date.now()}` }, ...state.contacts] })
-      showToast('Contact added to directory')
-    },
-    [state, persist, showToast]
+    (data: Omit<Contact, 'id'>) => createContactMutation.mutate(data),
+    [createContactMutation]
   )
 
   const createOrg = useCallback(
-    (data: Omit<Organization, 'id'>) => {
-      persist({ ...state, organizations: [{ ...data, id: `org-${Date.now()}` }, ...state.organizations] })
-      showToast('Organization registered')
-    },
-    [state, persist, showToast]
+    (data: Omit<Organization, 'id'>) => createOrgMutation.mutate(data),
+    [createOrgMutation]
   )
 
   const createActivity = useCallback(
-    (data: Omit<Activity, 'id' | 'timestamp'>) => {
-      persist({
-        ...state,
-        activities: [{ ...data, id: `act-${Date.now()}`, timestamp: 'Just now' }, ...state.activities],
-      })
-      showToast('Activity logged')
-    },
-    [state, persist, showToast]
+    (data: Omit<Activity, 'id' | 'timestamp'>) => createActivityMutation.mutate(data),
+    [createActivityMutation]
   )
 
   const createTask = useCallback(
-    (data: Omit<Task, 'id' | 'completed'>) => {
-      persist({ ...state, tasks: [{ ...data, id: `tsk-${Date.now()}`, completed: false }, ...state.tasks] })
-      showToast('Task created')
-    },
-    [state, persist, showToast]
+    (data: Omit<Task, 'id' | 'completed'>) => createTaskMutation.mutate(data),
+    [createTaskMutation]
   )
 
   const changeLeadStatus = useCallback(
-    (leadId: string, newStatus: LeadStatus) => {
-      const lead = state.leads.find(l => l.id === leadId)
-      if (!lead) return
-      const oldStatus = lead.status
-      const newActivity: Activity = {
-        id: `act-${Date.now()}`,
-        leadId,
-        contactId: lead.contactId,
-        organizationId: lead.organizationId,
-        channel: 'Status',
-        description: `Stage updated from "${oldStatus}" to "${newStatus}"`,
-        outcome: 'Pipeline advancement',
-        timestamp: 'Just now',
-      }
-      persist({
-        ...state,
-        leads: state.leads.map(l => (l.id === leadId ? { ...l, status: newStatus } : l)),
-        activities: [newActivity, ...state.activities],
-      })
-      showToast(`Lead moved to ${newStatus}`)
-    },
-    [state, persist, showToast]
+    (leadId: string, newStatus: LeadStatus) =>
+      changeLeadStatusMutation.mutate({ leadId, status: newStatus }),
+    [changeLeadStatusMutation]
   )
 
   const toggleTaskStatus = useCallback(
     (taskId: string) => {
       const task = state.tasks.find(t => t.id === taskId)
       if (!task) return
-      const nowCompleted = !task.completed
-      const newActivities = nowCompleted
-        ? [
-            {
-              id: `act-${Date.now()}`,
-              leadId: task.leadId,
-              contactId: task.contactId,
-              organizationId: task.organizationId,
-              channel: 'Task',
-              description: `Completed task: "${task.title}"`,
-              outcome: 'Action finished',
-              timestamp: 'Just now',
-            } as Activity,
-            ...state.activities,
-          ]
-        : state.activities
-      persist({
-        ...state,
-        tasks: state.tasks.map(t => (t.id === taskId ? { ...t, completed: nowCompleted } : t)),
-        activities: newActivities,
-      })
-      showToast(nowCompleted ? 'Task marked completed' : 'Task marked pending')
+      toggleTaskStatusMutation.mutate({ taskId, completed: !task.completed })
     },
-    [state, persist, showToast]
+    [state.tasks, toggleTaskStatusMutation]
   )
 
-  const resetToSampleData = useCallback(() => {
-    persist(JSON.parse(JSON.stringify(INITIAL_DATA)))
-    showToast('Reset to sample CRM fixtures')
-  }, [persist, showToast])
+  const resetToSampleData = useCallback(
+    () => resetToSampleDataMutation.mutate(),
+    [resetToSampleDataMutation]
+  )
 
   return (
     <CrmContext.Provider
       value={{
         state,
+        isLoading,
+        loadError,
+        refetch,
         currentActiveLeadId,
         currentLeadStageFilter,
         currentTaskFilter,

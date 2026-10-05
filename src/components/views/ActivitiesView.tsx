@@ -32,27 +32,40 @@ export default function ActivitiesView({ onOpenModal }: { onOpenModal: (id: Moda
             </tr>
           </thead>
           <tbody>
-            {state.activities.map(a => {
-              const lead = getLead(a.leadId) || { title: 'General' }
-              const contact = getContact(a.contactId)
-              return (
-                <tr key={a.id}>
-                  <td style={{ color: 'var(--text-muted)', fontSize: 11.5 }}>{a.timestamp}</td>
-                  <td>
-                    <span className="badge badge-new">{escapeHtml(a.channel)}</span>
-                  </td>
-                  <td style={{ fontWeight: 500 }}>{escapeHtml(a.description)}</td>
-                  <td
-                    style={{ color: 'var(--accent-primary)', cursor: 'pointer' }}
-                    onClick={() => setCurrentActiveLeadId(a.leadId)}
-                  >
-                    {escapeHtml(lead.title)}
-                  </td>
-                  <td>{escapeHtml(contact.name)}</td>
-                  <td style={{ color: 'var(--text-muted)' }}>{escapeHtml(a.outcome || '—')}</td>
-                </tr>
-              )
-            })}
+            {state.activities.length === 0 ? (
+              <tr>
+                <td colSpan={6}>
+                  <div className="empty-state">
+                    <div className="empty-title">No activities logged yet</div>
+                    <div className="empty-desc">
+                      Log your first activity, or load demo data from Settings → Reset to Demo Fixtures.
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            ) : (
+              state.activities.map(a => {
+                const lead = getLead(a.leadId) || { title: 'General' }
+                const contact = getContact(a.contactId)
+                return (
+                  <tr key={a.id}>
+                    <td style={{ color: 'var(--text-muted)', fontSize: 11.5 }}>{a.timestamp}</td>
+                    <td>
+                      <span className="badge badge-new">{escapeHtml(a.channel)}</span>
+                    </td>
+                    <td style={{ fontWeight: 500 }}>{escapeHtml(a.description)}</td>
+                    <td
+                      style={{ color: 'var(--accent-primary)', cursor: 'pointer' }}
+                      onClick={() => setCurrentActiveLeadId(a.leadId)}
+                    >
+                      {escapeHtml(lead.title)}
+                    </td>
+                    <td>{escapeHtml(contact.name)}</td>
+                    <td style={{ color: 'var(--text-muted)' }}>{escapeHtml(a.outcome || '—')}</td>
+                  </tr>
+                )
+              })
+            )}
           </tbody>
         </table>
       </div>

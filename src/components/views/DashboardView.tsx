@@ -22,7 +22,7 @@ function KPICards({ onNavigate }: { onNavigate: (v: string) => void }) {
           </svg>
         </div>
         <div className="kpi-value">{totalLeads}</div>
-        <div className="kpi-comparison">+14% this month</div>
+        {totalLeads > 0 && <div className="kpi-comparison">+14% this month</div>}
       </div>
 
       <div
@@ -35,7 +35,7 @@ function KPICards({ onNavigate }: { onNavigate: (v: string) => void }) {
           <span className="badge badge-engaged">In Progress</span>
         </div>
         <div className="kpi-value">{activeLeads}</div>
-        <div className="kpi-comparison">+8% vs last week</div>
+        {activeLeads > 0 && <div className="kpi-comparison">+8% vs last week</div>}
       </div>
 
       <div className="kpi-card" style={{ cursor: 'pointer' }} onClick={() => onNavigate('contacts')}>
@@ -47,7 +47,7 @@ function KPICards({ onNavigate }: { onNavigate: (v: string) => void }) {
           </svg>
         </div>
         <div className="kpi-value">{contactsCount}</div>
-        <div className="kpi-comparison neutral">+5 added recently</div>
+        {contactsCount > 0 && <div className="kpi-comparison neutral">+5 added recently</div>}
       </div>
 
       <div className="kpi-card" style={{ cursor: 'pointer' }} onClick={() => onNavigate('organizations')}>
@@ -58,7 +58,7 @@ function KPICards({ onNavigate }: { onNavigate: (v: string) => void }) {
           </svg>
         </div>
         <div className="kpi-value">{orgsCount}</div>
-        <div className="kpi-comparison neutral">Enterprise &amp; Mid-tier</div>
+        {orgsCount > 0 && <div className="kpi-comparison neutral">Enterprise &amp; Mid-tier</div>}
       </div>
 
       <div className="kpi-card" style={{ cursor: 'pointer' }} onClick={() => onNavigate('tasks')}>
@@ -69,7 +69,9 @@ function KPICards({ onNavigate }: { onNavigate: (v: string) => void }) {
           </svg>
         </div>
         <div className="kpi-value">{openTasksCount}</div>
-        <div className={`kpi-comparison ${openTasksCount > 5 ? 'neutral' : ''}`}>Due this week</div>
+        {openTasksCount > 0 && (
+          <div className={`kpi-comparison ${openTasksCount > 5 ? 'neutral' : ''}`}>Due this week</div>
+        )}
       </div>
     </div>
   )
@@ -150,8 +152,12 @@ function DashboardTasks({ onOpenModal }: { onOpenModal: (id: ModalId) => void })
         <div className="task-list">
           {tasks.length === 0 ? (
             <div className="empty-state" style={{ padding: 20 }}>
-              <div className="empty-title">All tasks completed!</div>
-              <div className="empty-desc">Create a new task to organize your next follow-up.</div>
+              <div className="empty-title">{state.tasks.length === 0 ? 'No tasks yet' : 'All tasks completed!'}</div>
+              <div className="empty-desc">
+                {state.tasks.length === 0
+                  ? 'Create a task to organize your next follow-up, or load demo data from Settings.'
+                  : 'Create a new task to organize your next follow-up.'}
+              </div>
             </div>
           ) : (
             tasks.map(task => {
@@ -275,8 +281,12 @@ function RecentLeadsTable() {
               <tr>
                 <td colSpan={7}>
                   <div className="empty-state">
-                    <div className="empty-title">No leads in this stage</div>
-                    <div className="empty-desc">Adjust the pipeline filter above or add a new prospect.</div>
+                    <div className="empty-title">{state.leads.length === 0 ? 'No leads yet' : 'No leads in this stage'}</div>
+                    <div className="empty-desc">
+                      {state.leads.length === 0
+                        ? 'Add your first lead, or load demo data from Settings → Reset to Demo Fixtures.'
+                        : 'Adjust the pipeline filter above or add a new prospect.'}
+                    </div>
                   </div>
                 </td>
               </tr>

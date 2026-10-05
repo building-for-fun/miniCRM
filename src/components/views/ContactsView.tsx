@@ -32,26 +32,39 @@ export default function ContactsView({ onOpenModal }: { onOpenModal: (id: ModalI
             </tr>
           </thead>
           <tbody>
-            {state.contacts.map(c => {
-              const org = getOrg(c.organizationId)
-              const leadCount = state.leads.filter(l => l.contactId === c.id).length
-              return (
-                <tr key={c.id}>
-                  <td style={{ fontWeight: 600 }}>{escapeHtml(c.name)}</td>
-                  <td>{escapeHtml(c.role || '—')}</td>
-                  <td>{escapeHtml(org.name)}</td>
-                  <td>
-                    <a href={`mailto:${c.email}`} style={{ color: 'var(--accent-primary)', textDecoration: 'none' }}>
-                      {escapeHtml(c.email)}
-                    </a>
-                  </td>
-                  <td>{escapeHtml(c.phone || '—')}</td>
-                  <td>
-                    <span className="badge badge-engaged">{leadCount} leads</span>
-                  </td>
-                </tr>
-              )
-            })}
+            {state.contacts.length === 0 ? (
+              <tr>
+                <td colSpan={6}>
+                  <div className="empty-state">
+                    <div className="empty-title">No contacts yet</div>
+                    <div className="empty-desc">
+                      Add your first contact, or load demo data from Settings → Reset to Demo Fixtures.
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            ) : (
+              state.contacts.map(c => {
+                const org = getOrg(c.organizationId)
+                const leadCount = state.leads.filter(l => l.contactId === c.id).length
+                return (
+                  <tr key={c.id}>
+                    <td style={{ fontWeight: 600 }}>{escapeHtml(c.name)}</td>
+                    <td>{escapeHtml(c.role || '—')}</td>
+                    <td>{escapeHtml(org.name)}</td>
+                    <td>
+                      <a href={`mailto:${c.email}`} style={{ color: 'var(--accent-primary)', textDecoration: 'none' }}>
+                        {escapeHtml(c.email)}
+                      </a>
+                    </td>
+                    <td>{escapeHtml(c.phone || '—')}</td>
+                    <td>
+                      <span className="badge badge-engaged">{leadCount} leads</span>
+                    </td>
+                  </tr>
+                )
+              })
+            )}
           </tbody>
         </table>
       </div>

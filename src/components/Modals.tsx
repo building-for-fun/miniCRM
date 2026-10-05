@@ -30,11 +30,37 @@ function ModalShell({
   )
 }
 
+function DependencyHint({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      style={{
+        background: 'var(--bg-subtle)',
+        border: '1px solid var(--border)',
+        borderRadius: 'var(--radius-md)',
+        padding: '10px 12px',
+        fontSize: 12,
+        color: 'var(--text-muted)',
+        lineHeight: 1.5,
+      }}
+    >
+      {children}
+    </div>
+  )
+}
+
+const SEED_HINT = 'Load demo data from Settings → Reset to Demo Fixtures.'
+
 function AddLeadModal({ onClose }: { onClose: () => void }) {
   const { state, createLead } = useCrm()
 
+  const missing: string[] = []
+  if (state.organizations.length === 0) missing.push('an organization')
+  if (state.contacts.length === 0) missing.push('a contact')
+  const canSubmit = missing.length === 0
+
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
+    if (!canSubmit) return
     const fd = new FormData(e.currentTarget)
     createLead({
       title: fd.get('title') as string,
@@ -53,6 +79,11 @@ function AddLeadModal({ onClose }: { onClose: () => void }) {
     <ModalShell title="Add New Lead" onClose={onClose}>
       <form onSubmit={handleSubmit}>
         <div className="modal-body">
+          {!canSubmit && (
+            <DependencyHint>
+              Add {missing.join(' and ')} first before creating a lead. {SEED_HINT}
+            </DependencyHint>
+          )}
           <div className="form-group">
             <label className="form-label">Lead Title / Opportunity Name *</label>
             <input type="text" className="form-control" name="title" required placeholder="e.g. Enterprise Cloud Migration" />
@@ -131,7 +162,7 @@ function AddLeadModal({ onClose }: { onClose: () => void }) {
           <button type="button" className="btn btn-default" onClick={onClose}>
             Cancel
           </button>
-          <button type="submit" className="btn btn-primary">
+          <button type="submit" className="btn btn-primary" disabled={!canSubmit}>
             Create Lead
           </button>
         </div>
@@ -142,9 +173,11 @@ function AddLeadModal({ onClose }: { onClose: () => void }) {
 
 function AddContactModal({ onClose }: { onClose: () => void }) {
   const { state, createContact } = useCrm()
+  const canSubmit = state.organizations.length > 0
 
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
+    if (!canSubmit) return
     const fd = new FormData(e.currentTarget)
     createContact({
       name: fd.get('name') as string,
@@ -160,6 +193,7 @@ function AddContactModal({ onClose }: { onClose: () => void }) {
     <ModalShell title="Add Contact" onClose={onClose}>
       <form onSubmit={handleSubmit}>
         <div className="modal-body">
+          {!canSubmit && <DependencyHint>Add an organization first before adding a contact. {SEED_HINT}</DependencyHint>}
           <div className="form-group">
             <label className="form-label">Full Name *</label>
             <input type="text" className="form-control" name="name" required placeholder="e.g. Maya Chen" />
@@ -195,7 +229,7 @@ function AddContactModal({ onClose }: { onClose: () => void }) {
           <button type="button" className="btn btn-default" onClick={onClose}>
             Cancel
           </button>
-          <button type="submit" className="btn btn-primary">
+          <button type="submit" className="btn btn-primary" disabled={!canSubmit}>
             Save Contact
           </button>
         </div>
@@ -263,9 +297,11 @@ function AddOrgModal({ onClose }: { onClose: () => void }) {
 
 function LogActivityModal({ onClose }: { onClose: () => void }) {
   const { state, createActivity } = useCrm()
+  const canSubmit = state.leads.length > 0
 
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
+    if (!canSubmit) return
     const fd = new FormData(e.currentTarget)
     const leadId = fd.get('leadId') as string
     const lead = state.leads.find(l => l.id === leadId)
@@ -284,6 +320,7 @@ function LogActivityModal({ onClose }: { onClose: () => void }) {
     <ModalShell title="Log Activity" onClose={onClose}>
       <form onSubmit={handleSubmit}>
         <div className="modal-body">
+          {!canSubmit && <DependencyHint>Add a lead first before logging an activity. {SEED_HINT}</DependencyHint>}
           <div className="form-row">
             <div className="form-group">
               <label className="form-label">Channel *</label>
@@ -330,7 +367,7 @@ function LogActivityModal({ onClose }: { onClose: () => void }) {
           <button type="button" className="btn btn-default" onClick={onClose}>
             Cancel
           </button>
-          <button type="submit" className="btn btn-primary">
+          <button type="submit" className="btn btn-primary" disabled={!canSubmit}>
             Log Activity
           </button>
         </div>
@@ -341,9 +378,11 @@ function LogActivityModal({ onClose }: { onClose: () => void }) {
 
 function CreateTaskModal({ onClose }: { onClose: () => void }) {
   const { state, createTask } = useCrm()
+  const canSubmit = state.leads.length > 0
 
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
+    if (!canSubmit) return
     const fd = new FormData(e.currentTarget)
     const leadId = fd.get('leadId') as string
     const lead = state.leads.find(l => l.id === leadId)
@@ -362,6 +401,7 @@ function CreateTaskModal({ onClose }: { onClose: () => void }) {
     <ModalShell title="Create Task" onClose={onClose}>
       <form onSubmit={handleSubmit}>
         <div className="modal-body">
+          {!canSubmit && <DependencyHint>Add a lead first before creating a task. {SEED_HINT}</DependencyHint>}
           <div className="form-group">
             <label className="form-label">Task Title *</label>
             <input
@@ -373,8 +413,8 @@ function CreateTaskModal({ onClose }: { onClose: () => void }) {
             />
           </div>
           <div className="form-group">
-            <label className="form-label">Related Lead</label>
-            <select className="form-control" name="leadId">
+            <label className="form-label">Related Lead *</label>
+            <select className="form-control" name="leadId" required>
               {state.leads.map(l => (
                 <option key={l.id} value={l.id}>
                   {l.title}
@@ -407,7 +447,7 @@ function CreateTaskModal({ onClose }: { onClose: () => void }) {
           <button type="button" className="btn btn-default" onClick={onClose}>
             Cancel
           </button>
-          <button type="submit" className="btn btn-primary">
+          <button type="submit" className="btn btn-primary" disabled={!canSubmit}>
             Save Task
           </button>
         </div>

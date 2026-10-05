@@ -20,8 +20,8 @@ export default function SettingsView({ onExport }: { onExport: () => void }) {
         </div>
         <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <p style={{ color: 'var(--text-muted)', fontSize: 12.5 }}>
-            This Mini CRM dashboard is powered by an in-memory relational data model with local persistence. Modifying
-            leads, tasks, and activities persists during your session.
+            This Mini CRM dashboard is backed by a relational database and served through the app&apos;s API. Changes
+            to leads, tasks, and activities are written to the database and persist across sessions.
           </p>
 
           <div style={{ display: 'flex', gap: 10 }}>
