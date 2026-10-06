@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { useCrm } from '@/context/CrmContext'
+import { useCrm, type ExportedData } from '@/context/CrmContext'
 import { escapeHtml } from '@/lib/crm-data'
 import DashboardView from './views/DashboardView'
 import LeadsView from './views/LeadsView'
@@ -283,9 +283,20 @@ function Topbar({
   onOpenModal: (id: ModalId) => void
   onToggleMobile: () => void
 }) {
-  const { resetToSampleData, showToast } = useCrm()
+  const { importData, resetToSampleData, showToast } = useCrm()
   const [addMenuOpen, setAddMenuOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
+
+  const handleImport = async (file: File) => {
+    try {
+      const text = await file.text()
+      const data = JSON.parse(text) as ExportedData
+      await importData(data)
+      showToast('Data imported successfully')
+    } catch (error) {
+      showToast(`Import failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
+  }
 
   return (
     <header className="topbar">
@@ -408,6 +419,27 @@ function Topbar({
               <button
                 className="dropdown-item"
                 onClick={() => {
+                  const input = document.createElement('input')
+                  input.type = 'file'
+                  input.accept = '.json'
+                  input.onchange = e => {
+                    const file = (e.target as HTMLInputElement).files[0]
+                    if (file) handleImport(file)
+                  }
+                  input.click()
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+                <span>Import Data</span>
+              </button>
+              <div className="dropdown-divider" />
+              <button
+                className="dropdown-item"
+                onClick={() => {
                   resetToSampleData()
                   setUserMenuOpen(false)
                 }}
@@ -490,14 +522,14 @@ export default function Dashboard() {
           {!isLoading && !loadError && (
             <>
               {currentView === 'dashboard' && (
-                <DashboardView onNavigate={navigate} onOpenModal={openModal} onExport={() => exportDataJson(state, crm.showToast)} />
+                <DashboardView onNavigate={navigate} onOpenModal={openModal} />
               )}
               {currentView === 'leads' && <LeadsView onOpenModal={openModal} />}
               {currentView === 'contacts' && <ContactsView onOpenModal={openModal} />}
               {currentView === 'organizations' && <OrganizationsView onOpenModal={openModal} />}
               {currentView === 'activities' && <ActivitiesView onOpenModal={openModal} />}
               {currentView === 'tasks' && <TasksView onOpenModal={openModal} />}
-              {currentView === 'settings' && <SettingsView onExport={() => exportDataJson(state, crm.showToast)} />}
+              {currentView === 'settings' && <SettingsView />}
             </>
           )}
         </main>

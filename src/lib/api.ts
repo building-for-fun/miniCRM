@@ -91,6 +91,172 @@ interface RawTask {
   completed: boolean
 }
 
+export interface ExportedData {
+  organizations: Array<{
+    id: string
+    name: string
+    industry: string | null
+    size: string | null
+    website: string | null
+    createdAt: string
+    updatedAt: string
+    contacts: Array<{
+      id: string
+      name: string
+      email: string
+      phone: string | null
+      role: string | null
+      organizationId: string | null
+      createdAt: string
+      updatedAt: string
+      leads: Array<{
+        id: string
+        title: string
+        status: string
+        source: string | null
+        priority: string
+        nextAction: string | null
+        notes: string | null
+        organizationId: string | null
+        contactId: string | null
+        createdAt: string
+        updatedAt: string
+        activities: Array<{
+          id: string
+          channel: string
+          description: string
+          outcome: string | null
+          timestamp: string
+        }>
+        tasks: Array<{
+          id: string
+          title: string
+          dueDate: string
+          priority: string
+          completed: boolean
+        }>
+      }>
+    }>
+  }>
+  contacts: Array<{
+    id: string
+    name: string
+    email: string
+    phone: string | null
+    role: string | null
+    organizationId: string | null
+    createdAt: string
+    updatedAt: string
+    leads: Array<{
+      id: string
+      title: string
+      status: string
+      source: string | null
+      priority: string
+      nextAction: string | null
+      notes: string | null
+      organizationId: string | null
+      contactId: string | null
+      createdAt: string
+      updatedAt: string
+      activities: Array<{
+        id: string
+        channel: string
+        description: string
+        outcome: string | null
+        timestamp: string
+      }>
+      tasks: Array<{
+        id: string
+        title: string
+        dueDate: string
+        priority: string
+        completed: boolean
+      }>
+    }>
+    activities: Array<{
+      id: string
+      channel: string
+      description: string
+      outcome: string | null
+      timestamp: string
+    }>
+    tasks: Array<{
+      id: string
+      title: string
+      dueDate: string
+      priority: string
+      completed: boolean
+    }>
+  }>
+  leads: Array<{
+    id: string
+    title: string
+    status: string
+    source: string | null
+    priority: string
+    nextAction: string | null
+    notes: string | null
+    organizationId: string | null
+    contactId: string | null
+    createdAt: string
+    updatedAt: string
+    activities: Array<{
+      id: string
+      channel: string
+      description: string
+      outcome: string | null
+      timestamp: string
+    }>
+    tasks: Array<{
+      id: string
+      title: string
+      dueDate: string
+      priority: string
+      completed: boolean
+    }>
+  }>
+  activities: Array<{
+    id: string
+    channel: string
+    description: string
+    outcome: string | null
+    timestamp: string
+    leadId: string | null
+    contactId: string | null
+    organizationId: string | null
+  }>
+  tasks: Array<{
+    id: string
+    title: string
+    dueDate: string
+    priority: string
+    completed: boolean
+    leadId: string | null
+    contactId: string | null
+    organizationId: string | null
+  }>
+}
+
+export async function exportData(): Promise<ExportedData> {
+  const res = await fetch('/api/export')
+  if (!res.ok) throw new Error('Failed to export data')
+  return res.json()
+}
+
+export async function importData(data: ExportedData): Promise<{ ok: boolean }> {
+  const res = await fetch('/api/import', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+  if (!res.ok) {
+    const error = await res.json()
+    throw new Error(error.error || 'Failed to import data')
+  }
+  return res.json()
+}
+
 export function formatRelativeTime(value: string | Date): string {
   const then = new Date(value).getTime()
   const minutes = Math.max(0, Math.floor((Date.now() - then) / 60_000))
@@ -206,4 +372,7 @@ export const crmApi = {
 
   resetSampleData: async (): Promise<{ ok: boolean }> =>
     post('/api/reset', {}),
+
+  exportData: async (): Promise<ExportedData> => exportData(),
+  importData: async (data: ExportedData): Promise<{ ok: boolean }> => importData(data),
 }

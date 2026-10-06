@@ -328,12 +328,11 @@ function RecentLeadsTable() {
 export default function DashboardView({
   onNavigate,
   onOpenModal,
-  onExport,
 }: {
   onNavigate: (v: string) => void
   onOpenModal: (id: ModalId) => void
-  onExport: () => void
 }) {
+  const crm = useCrm()
   return (
     <>
       <div className="view-header">
@@ -342,7 +341,7 @@ export default function DashboardView({
           <p className="view-subtitle">High-level overview of current pipeline and immediate actions.</p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button className="btn btn-default btn-sm" onClick={onExport}>
+          <button className="btn btn-default btn-sm" onClick={crm.exportData}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
               <polyline points="7 10 12 15 17 10" />

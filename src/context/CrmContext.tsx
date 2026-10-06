@@ -18,7 +18,7 @@ import {
   type Task,
   type LeadStatus,
 } from '@/lib/crm-data'
-import { crmApi } from '@/lib/api'
+import { crmApi, type ExportedData } from '@/lib/api'
 
 interface CrmContextType {
   state: CrmState
@@ -44,9 +44,13 @@ interface CrmContextType {
   changeLeadStatus: (leadId: string, newStatus: LeadStatus) => void
   toggleTaskStatus: (taskId: string) => void
   resetToSampleData: () => void
+  exportData: () => void
+  importData: (data: ExportedData) => void
   toasts: { id: number; message: string }[]
   showToast: (message: string) => void
 }
+
+export type { ExportedData }
 
 const CrmContext = createContext<CrmContextType | null>(null)
 
@@ -213,6 +217,30 @@ export function CrmProvider({ children }: { children: ReactNode }) {
     onError: error => notifyError(error, 'Failed to reset sample data'),
   })
 
+  const exportDataMutation = useMutation({
+    mutationFn: crmApi.exportData,
+    onSuccess: (data) => {
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'minicrm-export.json'
+      a.click()
+      URL.revokeObjectURL(url)
+      showToast('Data exported successfully')
+    },
+    onError: error => notifyError(error, 'Failed to export data'),
+  })
+
+  const importDataMutation = useMutation({
+    mutationFn: crmApi.importData,
+    onSuccess: () => {
+      refetch()
+      showToast('Data imported successfully')
+    },
+    onError: error => notifyError(error, 'Failed to import data'),
+  })
+
   const createLead = useCallback(
     (data: Omit<Lead, 'id' | 'createdAt'>) => createLeadMutation.mutate(data),
     [createLeadMutation]
@@ -258,6 +286,9 @@ export function CrmProvider({ children }: { children: ReactNode }) {
     [resetToSampleDataMutation]
   )
 
+  const exportData = useCallback(() => exportDataMutation.mutate(), [exportDataMutation])
+  const importData = useCallback((data: ExportedData) => importDataMutation.mutate(data), [importDataMutation])
+
   return (
     <CrmContext.Provider
       value={{
@@ -284,6 +315,8 @@ export function CrmProvider({ children }: { children: ReactNode }) {
         changeLeadStatus,
         toggleTaskStatus,
         resetToSampleData,
+        exportData,
+        importData,
         toasts,
         showToast,
       }}
